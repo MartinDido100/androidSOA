@@ -10,8 +10,8 @@
 
     <Button
         android:id="@+id/botonIngresar"
-        android:layout_width="293dp"
-        android:layout_height="96dp"
+        android:layout_width="324dp"
+        android:layout_height="100dp"
         android:backgroundTint="#FFFFFF"
         android:backgroundTintMode="src_over"
         android:fontFamily="@font/adlam_display"
@@ -19,6 +19,39 @@
         android:textColor="#000000"
         android:textColorLink="#764949"
         android:textSize="34sp"
-        tools:layout_editor_absoluteX="93dp"
-        tools:layout_editor_absoluteY="684dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.489"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.903" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="614dp"
+        android:layout_height="1133dp"
+        android:layout_marginBottom="24dp"
+        android:background="#A6000000"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.1" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="354dp"
+        android:layout_height="188dp"
+        android:layout_marginTop="252dp"
+        android:background="@drawable/rounded_background"
+        android:gravity="center_vertical"
+        android:text="Error: Debes conectarte al dispositivo mediante bluetooth para ingresar"
+        android:textAlignment="center"
+        android:textColor="#FF0000"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.491"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
