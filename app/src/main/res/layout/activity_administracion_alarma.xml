@@ -7,36 +7,46 @@
     android:background="@drawable/adminbackground">
 
     <Button
-        android:id="@+id/botonEncender"
+        android:id="@+id/btnEncender"
         android:layout_width="256dp"
         android:layout_height="110dp"
         android:backgroundTint="#264350"
         android:text="Encender alarma"
         android:textSize="20sp"
-        tools:layout_editor_absoluteX="96dp"
-        tools:layout_editor_absoluteY="614dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.779" />
 
     <Button
-        android:id="@+id/botonApagar"
+        android:id="@+id/btnApagar"
         android:layout_width="256dp"
         android:layout_height="111dp"
         android:backgroundTint="#264350"
         android:text="Apagar alarma"
         android:textSize="20sp"
-        tools:layout_editor_absoluteX="96dp"
-        tools:layout_editor_absoluteY="757dp" />
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.778" />
 
     <TextView
         android:id="@+id/estadoAlarma"
-        android:layout_width="244dp"
-        android:layout_height="88dp"
+        android:layout_width="297dp"
+        android:layout_height="91dp"
         android:gravity="center_vertical"
         android:text="Apagado"
         android:textAlignment="center"
         android:textColor="#F40606"
         android:textSize="45sp"
-        tools:layout_editor_absoluteX="102dp"
-        tools:layout_editor_absoluteY="16dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.028" />
 
     <TextView
         android:id="@+id/activationText"
@@ -48,7 +58,11 @@
         android:textAlignment="center"
         android:textColor="#FFFFFF"
         android:textSize="24sp"
-        tools:layout_editor_absoluteX="67dp"
-        tools:layout_editor_absoluteY="316dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.503"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.317" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,17 +1,16 @@
 package com.example.soa;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothHeadset;
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.Manifest;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,7 +19,6 @@ import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -28,6 +26,8 @@ public class MainActivity extends AppCompatActivity {
     private Button botonIngresar;
     private TextView btErrorView;
     private TextView modalBg;
+    private boolean estaBonded = false;
+    String direccionBluethoot;
 
     String[] permissions= new String[]{
             Manifest.permission.BLUETOOTH,
@@ -45,59 +45,79 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+            super.onCreate(savedInstanceState);
+            setContentView(R.layout.activity_main);
 
-        // Inicializar BluetoothAdapter
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            // Inicializar BluetoothAdapter
+            bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        // Referencias a los elementos del layout
-        botonIngresar = findViewById(R.id.botonIngresar);
-        btErrorView = findViewById(R.id.btErrorView);
-        modalBg = findViewById(R.id.modalBg);
+            // Referencias a los elementos del layout
+            botonIngresar = findViewById(R.id.botonIngresar);
+            btErrorView = findViewById(R.id.btErrorView);
+            modalBg = findViewById(R.id.modalBg);
 
 
-        // Ocultar mensaje de error inicialmente
-        btErrorView.setVisibility(TextView.INVISIBLE);
-        modalBg.setVisibility(TextView.INVISIBLE);
+            // Ocultar mensaje de error inicialmente
+            btErrorView.setVisibility(TextView.INVISIBLE);
+            modalBg.setVisibility(TextView.INVISIBLE);
 
-        // Evento de clic en el botón Ingresar
-        botonIngresar.setOnClickListener(v -> {
-            if (bluetoothAdapter == null) {
-                // Dispositivo no soporta Bluetooth
-                mostrarError("El dispositivo no soporta Bluetooth");
-            } else if (!bluetoothAdapter.isEnabled()) {
-                // Bluetooth no está activado
-                mostrarError("El Bluetooth no está activado");
-            } else if (!isDeviceConnectedByName(DEVICE_NAME)) {
-                // El dispositivo específico no está conectado
-                mostrarError("No estás conectado al dispositivo Bluetooth con el nombre específico");
-            } else {
-                ocultarError();
-                Toast.makeText(MainActivity.this, "Conectado correctamente al dispositivo con nombre: " + DEVICE_NAME, Toast.LENGTH_SHORT).show();
-                // Aquí puedes agregar el código para la siguiente actividad o acción
-            }
-        });
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+            filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
+            filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
 
-        modalBg.setOnClickListener(v -> ocultarError());
+            // Evento de clic en el botón Ingresar
+            botonIngresar.setOnClickListener(v -> {
+                if (bluetoothAdapter == null) {
+                    // Dispositivo no soporta Bluetooth
+                    mostrarError("El dispositivo no soporta Bluetooth");
+                } else if (!bluetoothAdapter.isEnabled()) {
+                    // Bluetooth no está activado
+                    mostrarError("El Bluetooth no está activado");
+                } else if (!estaBonded && !isDeviceConnectedByName(DEVICE_NAME)) {
+                    mostrarError("El dispositivo Silentwave no está vinculado");
+                }else {
+                    // Ir a la siguiente actividad (ENVIAR MAC ADDRESS)
+                    Intent intent = new Intent(MainActivity.this, AdministracionAlarma.class);
+                    intent.putExtra("Direccion_Bluethoot", direccionBluethoot);
+                    startActivity(intent);
+                }
+            });
+
+            modalBg.setOnClickListener(v -> ocultarError());
+
+            this.registerReceiver(broadcastReceiver, filter);
     }
 
+    @SuppressLint("MissingPermission")
     private boolean isDeviceConnectedByName(String deviceName) {
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
             return false; // Bluetooth no soportado o no habilitado
         }
 
-        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
         for (BluetoothDevice device : bluetoothAdapter.getBondedDevices()) {
             if (device.getName().equals(deviceName)) {
+                direccionBluethoot = device.getAddress();
                 return true;
             }
         }
         return false; // Ningún dispositivo emparejado está conectado
     }
 
-    // Función para mostrar el mensaje de error
+    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        BluetoothDevice device;
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
+            if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)){
+                direccionBluethoot = device.getAddress();
+                estaBonded = true;
+            }
+        }
+    };
+
     private void mostrarError(String mensaje) {
         btErrorView.setText(mensaje);
         btErrorView.setVisibility(TextView.VISIBLE);
@@ -109,7 +129,6 @@ public class MainActivity extends AppCompatActivity {
         btErrorView.setVisibility(TextView.INVISIBLE);
         modalBg.setVisibility(TextView.INVISIBLE);
     }
-
 
     //Metodo que chequea si estan habilitados los permisos
     private  boolean checkPermissions() {
