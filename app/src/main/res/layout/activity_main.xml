@@ -33,27 +33,30 @@
         android:layout_height="1133dp"
         android:layout_marginBottom="24dp"
         android:background="#A6000000"
-        android:visibility="visible"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.1" />
 
-    <TextView
-        android:id="@+id/btErrorView"
-        android:layout_width="354dp"
-        android:layout_height="188dp"
-        android:layout_marginTop="252dp"
-        android:background="@drawable/rounded_background"
-        android:gravity="center_vertical"
-        android:text="Error: Debes conectarte al dispositivo mediante bluetooth para ingresar"
-        android:textAlignment="center"
-        android:textColor="#FF0000"
-        android:textSize="24sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.491"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="visible">
 
+        <!-- Otros elementos de diseño -->
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="232dp"
+            android:layout_height="306dp"
+            android:layout_centerInParent="true"
+            android:indeterminateTint="@android:color/white"
+            android:rotationY="23"
+            android:translationX="50px"
+            android:translationY="-492px"
+            android:visibility="gone" />
+
+    </RelativeLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

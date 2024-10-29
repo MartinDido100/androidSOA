@@ -118,7 +118,7 @@ public class AdministracionAlarma extends AppCompatActivity {
 
         //I send a character when resuming.beginning transmission to check device is connected
         //If it is not an exception will be thrown in the write method and finish() will be called
-        mConnectedThread.write("x");
+        mConnectedThread.write("2");
     }
 
 
@@ -133,6 +133,35 @@ public class AdministracionAlarma extends AppCompatActivity {
             btSocket.close();
         } catch (IOException e2) {
             //insert code to deal with this
+        }
+    }
+
+    void handleCurrentState(String state){
+        switch (state){
+            case "ON":
+                activationText.setText("Alarma desactivada");
+                btnApagar.setVisibility(View.INVISIBLE);
+                btnEncender.setVisibility(View.VISIBLE);
+                txtEstado.setText("Apagado");
+                txtEstado.setTextColor(Color.RED);
+                break;
+            case "ARMED":
+                activationText.setText("Alarma en escucha");
+                btnApagar.setVisibility(View.VISIBLE);
+                btnEncender.setVisibility(View.INVISIBLE);
+                txtEstado.setText("Encendido");
+                txtEstado.setTextColor(Color.GREEN);
+                break;
+            case "ACTIVATED":
+                activationText.setText("Alarma sonando");
+                btnApagar.setVisibility(View.VISIBLE);
+                btnEncender.setVisibility(View.INVISIBLE);
+                txtEstado.setText("Encendido");
+                txtEstado.setTextColor(Color.GREEN);
+                break;
+            default:
+                activationText.setText(state);
+                break;
         }
     }
 
@@ -155,13 +184,13 @@ public class AdministracionAlarma extends AppCompatActivity {
                     //voy concatenando el msj
                     String readMessage = (String) msg.obj;
                     recDataString.append(readMessage);
-                    int endOfLineIndex = recDataString.indexOf("\r\n");
+                    int endOfLineIndex = recDataString.indexOf("\n");
 
                     //si se recibio un msj completo
                     if (endOfLineIndex > 0)
                     {
-                        String dataInPrint = recDataString.substring(0, endOfLineIndex);
-                        txtEstado.setText(dataInPrint);
+                        Log.d("Data", recDataString.substring(0, endOfLineIndex));
+                        handleCurrentState(recDataString.substring(0, endOfLineIndex));
                         recDataString.delete(0, recDataString.length());
                     }
                 }
@@ -225,6 +254,7 @@ public class AdministracionAlarma extends AppCompatActivity {
             byte[] buffer = new byte[256];
             int bytes;
 
+
             //el hilo secundario se queda esperando mensajes del HC05
             while (true)
             {
@@ -250,10 +280,15 @@ public class AdministracionAlarma extends AppCompatActivity {
             try {
                 mmOutStream.write(msgBuffer);                //write bytes over BT connection via outstream
             } catch (IOException e) {
-                //if you cannot write, close the application
-                finish();
-
+                handleBluetoothError();
             }
+        }
+
+        private void handleBluetoothError() {
+            Intent intent = new Intent(AdministracionAlarma.this, MainActivity.class);
+            intent.putExtra("errorFlag", "Bluetooth connection failed");
+            startActivity(intent);
+            //finish();
         }
     }
 

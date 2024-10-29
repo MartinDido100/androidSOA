@@ -9,9 +9,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.Manifest;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -24,8 +28,8 @@ public class MainActivity extends AppCompatActivity {
 
     private BluetoothAdapter bluetoothAdapter;
     private Button botonIngresar;
-    private TextView btErrorView;
     private TextView modalBg;
+    private ProgressBar progressBar;
     private boolean estaBonded = false;
     String direccionBluethoot;
 
@@ -48,17 +52,23 @@ public class MainActivity extends AppCompatActivity {
             super.onCreate(savedInstanceState);
             setContentView(R.layout.activity_main);
 
+
+            Intent intent = getIntent();
+            String errorFlag = intent.getStringExtra("errorFlag");
+            if (errorFlag != null && errorFlag.equals("Bluetooth connection failed")) {
+                Toast.makeText(this, "Silentwave no conectado", Toast.LENGTH_LONG).show();
+            }
+
             // Inicializar BluetoothAdapter
             bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
             // Referencias a los elementos del layout
             botonIngresar = findViewById(R.id.botonIngresar);
-            btErrorView = findViewById(R.id.btErrorView);
             modalBg = findViewById(R.id.modalBg);
+            progressBar = findViewById(R.id.progressBar);
 
 
             // Ocultar mensaje de error inicialmente
-            btErrorView.setVisibility(TextView.INVISIBLE);
             modalBg.setVisibility(TextView.INVISIBLE);
 
             IntentFilter filter = new IntentFilter();
@@ -66,25 +76,24 @@ public class MainActivity extends AppCompatActivity {
             filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
             filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
 
+
             // Evento de clic en el botón Ingresar
             botonIngresar.setOnClickListener(v -> {
                 if (bluetoothAdapter == null) {
                     // Dispositivo no soporta Bluetooth
-                    mostrarError("El dispositivo no soporta Bluetooth");
+                    Toast.makeText(this, "El dispositivo no soporta Bluetooth", Toast.LENGTH_LONG).show();
                 } else if (!bluetoothAdapter.isEnabled()) {
                     // Bluetooth no está activado
-                    mostrarError("El Bluetooth no está activado");
+                    Toast.makeText(this, "El Bluetooth no está activado", Toast.LENGTH_LONG).show();
                 } else if (!estaBonded && !isDeviceConnectedByName(DEVICE_NAME)) {
-                    mostrarError("El dispositivo Silentwave no está vinculado");
+                    Toast.makeText(this, "El dispositivo Silentwave no está vinculado", Toast.LENGTH_LONG).show();
                 }else {
-                    // Ir a la siguiente actividad (ENVIAR MAC ADDRESS)
-                    Intent intent = new Intent(MainActivity.this, AdministracionAlarma.class);
-                    intent.putExtra("Direccion_Bluethoot", direccionBluethoot);
-                    startActivity(intent);
+                    showLoader();
+                    Intent newIntent = new Intent(MainActivity.this, AdministracionAlarma.class);
+                    newIntent.putExtra("Direccion_Bluethoot", direccionBluethoot);
+                    startActivity(newIntent);
                 }
             });
-
-            modalBg.setOnClickListener(v -> ocultarError());
 
             this.registerReceiver(broadcastReceiver, filter);
     }
@@ -118,16 +127,13 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private void mostrarError(String mensaje) {
-        btErrorView.setText(mensaje);
-        btErrorView.setVisibility(TextView.VISIBLE);
+    public void showLoader() {
         modalBg.setVisibility(TextView.VISIBLE);
+        progressBar.setVisibility(View.VISIBLE);
     }
 
-    // Función para ocultar el mensaje de error
-    private void ocultarError() {
-        btErrorView.setVisibility(TextView.INVISIBLE);
-        modalBg.setVisibility(TextView.INVISIBLE);
+    public void hideLoader() {
+        progressBar.setVisibility(View.GONE);
     }
 
     //Metodo que chequea si estan habilitados los permisos
