@@ -4,11 +4,19 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -22,13 +30,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
-public class AdministracionAlarma extends AppCompatActivity {
+public class AdministracionAlarma extends AppCompatActivity implements SensorEventListener {
 
 
     Button btnApagar;
     Button btnEncender;
     TextView txtEstado;
     TextView activationText;
+    private Vibrator vibrator;
+
 
     Handler bluetoothIn;
     final int handlerState = 0; //used to identify handler message
@@ -36,7 +46,8 @@ public class AdministracionAlarma extends AppCompatActivity {
     private BluetoothAdapter btAdapter = null;
     private BluetoothSocket btSocket = null;
     private final StringBuilder recDataString = new StringBuilder();
-
+    private MediaPlayer mediaPlayer;
+    private  MediaPlayer mediaPlayerAlarm;
     private ConnectedThread mConnectedThread;
 
     // SPP UUID service  - Funciona en la mayoria de los dispositivos
@@ -44,6 +55,12 @@ public class AdministracionAlarma extends AppCompatActivity {
 
     // String for MAC address del Hc05
     private static String address = null;
+
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private long lastShakeTime = 0;
+    private static final int SHAKE_THRESHOLD_GRAVITY = 5;
+    private static final int SHAKE_TIME_LAPSE = 5000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -59,6 +76,7 @@ public class AdministracionAlarma extends AppCompatActivity {
 
         //obtengo el adaptador del bluethoot
         btAdapter = BluetoothAdapter.getDefaultAdapter();
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
         //defino el Handler de comunicacion entre el hilo Principal  el secundario.
         //El hilo secundario va a mostrar informacion al layout atraves utilizando indeirectamente a este handler
@@ -68,6 +86,13 @@ public class AdministracionAlarma extends AppCompatActivity {
         btnEncender.setOnClickListener(btnEncenderListener);
         btnApagar.setOnClickListener(btnApagarListener);
 
+        // Inicializa el Sensor Manager
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+        // Inicializa el MediaPlayer con el archivo de sonido en res/raw
+        mediaPlayer = MediaPlayer.create(this, R.raw.music);
+        mediaPlayerAlarm = MediaPlayer.create(this, R.raw.alarma);
     }
 
     @SuppressLint("MissingPermission")
@@ -85,6 +110,7 @@ public class AdministracionAlarma extends AppCompatActivity {
 
         BluetoothDevice device = btAdapter.getRemoteDevice(address);
 
+        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
         //se realiza la conexion del Bluethoot crea y se conectandose a atraves de un socket
         try
         {
@@ -121,18 +147,83 @@ public class AdministracionAlarma extends AppCompatActivity {
         mConnectedThread.write("2");
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Libera los recursos del MediaPlayer cuando la actividad se destruye
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+
+        if (mediaPlayerAlarm != null) {
+            mediaPlayerAlarm.release();
+            mediaPlayerAlarm = null;
+        }
+    }
+
+    private void vibrate() {
+        if (vibrator != null) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(500000000, VibrationEffect.EFFECT_TICK)); // Vibrar por 500ms
+            }
+        }
+    }
 
     @Override
     //Cuando se ejecuta el evento onPause se cierra el socket Bluethoot, para no recibiendo datos
     public void onPause()
     {
         super.onPause();
+        sensorManager.unregisterListener(this);
         try
         {
             //Don't leave Bluetooth sockets open when leaving activity
             btSocket.close();
         } catch (IOException e2) {
             //insert code to deal with this
+        }
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            detectShake(event);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+
+    private void detectShake(SensorEvent event) {
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+
+        // Calcula la fuerza del movimiento
+        float gX = x / SensorManager.GRAVITY_EARTH;
+        float gY = y / SensorManager.GRAVITY_EARTH;
+        float gZ = z / SensorManager.GRAVITY_EARTH;
+
+        // Magnitud del vector G
+        float gForce = (float) Math.sqrt(gX * gX + gY * gY + gZ * gZ);
+
+        if (gForce > SHAKE_THRESHOLD_GRAVITY) {
+            final long now = System.currentTimeMillis();
+
+            // Solo envía una señal si la sacudida ocurrió después del intervalo de tiempo especificado
+            if (now - lastShakeTime > SHAKE_TIME_LAPSE) {
+                lastShakeTime = now;
+
+                if(txtEstado.getText().equals("Apagado")){
+                    encenderAlarma();
+                }else{
+                    apagarAlarma();
+                }
+
+            }
         }
     }
 
@@ -158,10 +249,21 @@ public class AdministracionAlarma extends AppCompatActivity {
                 btnEncender.setVisibility(View.INVISIBLE);
                 txtEstado.setText("Encendido");
                 txtEstado.setTextColor(Color.GREEN);
+                vibrate();
+                mediaPlayerAlarm.start();
+                break;
+            case "ACTIVATEDR":
+                vibrate();
+                mediaPlayerAlarm.start();
+                activationText.setText("Reed switch detectado");
+                break;
+            case "ACTIVATEDM":
+                vibrate();
+                mediaPlayerAlarm.start();
+                activationText.setText("Movimiento detectado");
                 break;
             default:
                 activationText.setText(state);
-                break;
         }
     }
 
@@ -189,7 +291,7 @@ public class AdministracionAlarma extends AppCompatActivity {
                     //si se recibio un msj completo
                     if (endOfLineIndex > 0)
                     {
-                        Log.d("Data", recDataString.substring(0, endOfLineIndex));
+                        Log.d("aa",recDataString.substring(0, endOfLineIndex));
                         handleCurrentState(recDataString.substring(0, endOfLineIndex));
                         recDataString.delete(0, recDataString.length());
                     }
@@ -199,27 +301,38 @@ public class AdministracionAlarma extends AppCompatActivity {
 
     }
 
+    private void encenderAlarma(){
+        mConnectedThread.write("1");  // Send "1" via Bluetooth
+        btnApagar.setVisibility(View.VISIBLE);
+        btnEncender.setVisibility(View.INVISIBLE);
+        txtEstado.setText("Encendido");
+        txtEstado.setTextColor(Color.GREEN);
+        mediaPlayer.stop();
+    }
+
     //Listener del boton encender que envia  msj para enceder Led a Arduino atraves del Bluethoot
     private final View.OnClickListener btnEncenderListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            mConnectedThread.write("1");  // Send "1" via Bluetooth
-            btnApagar.setVisibility(View.VISIBLE);
-            btnEncender.setVisibility(View.INVISIBLE);
-            txtEstado.setText("Encendido");
-            txtEstado.setTextColor(Color.GREEN);
+        encenderAlarma();
         }
     };
+
+    private void apagarAlarma(){
+        mConnectedThread.write("1");
+        btnApagar.setVisibility(View.INVISIBLE);
+        btnEncender.setVisibility(View.VISIBLE);
+        txtEstado.setText("Apagado");
+        txtEstado.setTextColor(Color.RED);
+        mediaPlayerAlarm.stop();
+        vibrator.cancel();
+    }
 
     //Listener del boton encender que envia  msj para Apagar Led a Arduino atraves del Bluethoot
     private final View.OnClickListener btnApagarListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            mConnectedThread.write("1");
-            btnApagar.setVisibility(View.INVISIBLE);
-            btnEncender.setVisibility(View.VISIBLE);
-            txtEstado.setText("Apagado");
-            txtEstado.setTextColor(Color.RED);
+        apagarAlarma();
         }
     };
 

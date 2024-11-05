@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean estaBonded = false;
     String direccionBluethoot;
 
+
     String[] permissions= new String[]{
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN,
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.VIBRATE
     };
 
     public static final int MULTIPLE_PERMISSIONS = 10;
@@ -52,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
             super.onCreate(savedInstanceState);
             setContentView(R.layout.activity_main);
 
-
+            checkPermissions();
             Intent intent = getIntent();
             String errorFlag = intent.getStringExtra("errorFlag");
             if (errorFlag != null && errorFlag.equals("Bluetooth connection failed")) {
