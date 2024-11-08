@@ -1,6 +1,8 @@
 package com.example.soa;
 
 import android.annotation.SuppressLint;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -12,6 +14,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,6 +27,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,8 +50,9 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
     private BluetoothAdapter btAdapter = null;
     private BluetoothSocket btSocket = null;
     private final StringBuilder recDataString = new StringBuilder();
-    private MediaPlayer mediaPlayer;
+    private MediaPlayer musicPlayer;
     private  MediaPlayer mediaPlayerAlarm;
+    private MediaPlayer armed;
     private ConnectedThread mConnectedThread;
 
     // SPP UUID service  - Funciona en la mayoria de los dispositivos
@@ -61,6 +66,8 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
     private long lastShakeTime = 0;
     private static final int SHAKE_THRESHOLD_GRAVITY = 5;
     private static final int SHAKE_TIME_LAPSE = 5000;
+    NotificationManager notificationManager;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -73,6 +80,18 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
         btnEncender=(Button)findViewById(R.id.btnEncender);
         txtEstado=(TextView)findViewById(R.id.estadoAlarma);
         activationText=(TextView)findViewById(R.id.activationText);
+        notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        //Se crea el canal de notificaciones
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    "alarma_channel",
+                    "Alarma Notifications",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Notificaciones para eventos de alarma");
+            notificationManager.createNotificationChannel(channel);
+        }
 
         //obtengo el adaptador del bluethoot
         btAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -91,8 +110,9 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         // Inicializa el MediaPlayer con el archivo de sonido en res/raw
-        mediaPlayer = MediaPlayer.create(this, R.raw.music);
+        musicPlayer = MediaPlayer.create(this, R.raw.musica);
         mediaPlayerAlarm = MediaPlayer.create(this, R.raw.alarma);
+        armed = MediaPlayer.create(this, R.raw.armed);
     }
 
     @SuppressLint("MissingPermission")
@@ -151,21 +171,28 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
     protected void onDestroy() {
         super.onDestroy();
         // Libera los recursos del MediaPlayer cuando la actividad se destruye
-        if (mediaPlayer != null) {
-            mediaPlayer.release();
-            mediaPlayer = null;
+        if (musicPlayer != null) {
+            musicPlayer.release();
+            musicPlayer = null;
         }
 
         if (mediaPlayerAlarm != null) {
             mediaPlayerAlarm.release();
             mediaPlayerAlarm = null;
         }
+
+        if (armed != null) {
+            armed.release();
+            armed = null;
+        }
     }
 
+    @SuppressLint("ObsoleteSdkInt")
     private void vibrate() {
         if (vibrator != null) {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(500000000, VibrationEffect.EFFECT_TICK)); // Vibrar por 500ms
+                long[] pattern = {0, 1000, 1000};
+                vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0));
             }
         }
     }
@@ -178,17 +205,19 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
         sensorManager.unregisterListener(this);
         try
         {
-            //Don't leave Bluetooth sockets open when leaving activity
             btSocket.close();
         } catch (IOException e2) {
-            //insert code to deal with this
         }
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            detectShake(event);
+            try {
+                detectShake(event);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -197,7 +226,7 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
 
     }
 
-    private void detectShake(SensorEvent event) {
+    private void detectShake(SensorEvent event) throws IOException {
         float x = event.values[0];
         float y = event.values[1];
         float z = event.values[2];
@@ -227,8 +256,19 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
         }
     }
 
-    void handleCurrentState(String state){
-        switch (state){
+    void sendNotification(String title, String message) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "alarma_channel")
+                .setSmallIcon(R.drawable.ic_alarm)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true);
+
+        notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+    }
+
+    void handleCurrentState(String state) {
+        switch (state) {
             case "ON":
                 activationText.setText("Alarma desactivada");
                 btnApagar.setVisibility(View.INVISIBLE);
@@ -242,25 +282,30 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
                 btnEncender.setVisibility(View.INVISIBLE);
                 txtEstado.setText("Encendido");
                 txtEstado.setTextColor(Color.GREEN);
+                armed.start();
                 break;
             case "ACTIVATED":
+                vibrate();
                 activationText.setText("Alarma sonando");
                 btnApagar.setVisibility(View.VISIBLE);
                 btnEncender.setVisibility(View.INVISIBLE);
                 txtEstado.setText("Encendido");
                 txtEstado.setTextColor(Color.GREEN);
-                vibrate();
-                mediaPlayerAlarm.start();
+                mediaPlayerAlarm.setLooping(true);
                 break;
             case "ACTIVATEDR":
                 vibrate();
                 mediaPlayerAlarm.start();
                 activationText.setText("Reed switch detectado");
+                sendNotification("Reed switch activado", "Se detectó una apertura con el reed switch.");
+                mediaPlayerAlarm.setLooping(true);
                 break;
             case "ACTIVATEDM":
                 vibrate();
                 mediaPlayerAlarm.start();
                 activationText.setText("Movimiento detectado");
+                sendNotification("Movimiento detectado", "Se ha detectado movimiento.");
+                mediaPlayerAlarm.setLooping(true);
                 break;
             default:
                 activationText.setText(state);
@@ -291,7 +336,7 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
                     //si se recibio un msj completo
                     if (endOfLineIndex > 0)
                     {
-                        Log.d("aa",recDataString.substring(0, endOfLineIndex));
+                        Log.d("Mensaje Bluetooth Recibido: ",recDataString.substring(0, endOfLineIndex));
                         handleCurrentState(recDataString.substring(0, endOfLineIndex));
                         recDataString.delete(0, recDataString.length());
                     }
@@ -307,24 +352,29 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
         btnEncender.setVisibility(View.INVISIBLE);
         txtEstado.setText("Encendido");
         txtEstado.setTextColor(Color.GREEN);
-        mediaPlayer.stop();
+        armed.start();
     }
 
     //Listener del boton encender que envia  msj para enceder Led a Arduino atraves del Bluethoot
     private final View.OnClickListener btnEncenderListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-        encenderAlarma();
+            encenderAlarma();
         }
     };
 
-    private void apagarAlarma(){
+    private void apagarAlarma() throws IOException {
         mConnectedThread.write("1");
         btnApagar.setVisibility(View.INVISIBLE);
         btnEncender.setVisibility(View.VISIBLE);
         txtEstado.setText("Apagado");
         txtEstado.setTextColor(Color.RED);
-        mediaPlayerAlarm.stop();
+        if(mediaPlayerAlarm.isLooping()){
+            mediaPlayerAlarm.setLooping(false);
+            mediaPlayerAlarm.stop();
+            mediaPlayerAlarm.prepare();
+            musicPlayer.start();
+        }
         vibrator.cancel();
     }
 
@@ -332,7 +382,11 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
     private final View.OnClickListener btnApagarListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-        apagarAlarma();
+            try {
+                apagarAlarma();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     };
 
@@ -401,7 +455,7 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
             Intent intent = new Intent(AdministracionAlarma.this, MainActivity.class);
             intent.putExtra("errorFlag", "Bluetooth connection failed");
             startActivity(intent);
-            //finish();
+            finish();
         }
     }
 

@@ -43,7 +43,8 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.VIBRATE
+            Manifest.permission.VIBRATE,
+            Manifest.permission.POST_NOTIFICATIONS
     };
 
     public static final int MULTIPLE_PERMISSIONS = 10;
@@ -94,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
                     Intent newIntent = new Intent(MainActivity.this, AdministracionAlarma.class);
                     newIntent.putExtra("Direccion_Bluethoot", direccionBluethoot);
                     startActivity(newIntent);
+                    finish();
                 }
             });
 
@@ -142,9 +144,6 @@ public class MainActivity extends AppCompatActivity {
     private  boolean checkPermissions() {
         int result;
         List<String> listPermissionsNeeded = new ArrayList<>();
-
-        //Se chequea si la version de Android es menor a la 6
-
 
         for (String p:permissions) {
             result = ContextCompat.checkSelfPermission(this,p);
