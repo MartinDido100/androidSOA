@@ -136,10 +136,6 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
     }
 
-    public void hideLoader() {
-        progressBar.setVisibility(View.GONE);
-    }
-
     //Metodo que chequea si estan habilitados los permisos
     private  boolean checkPermissions() {
         int result;
