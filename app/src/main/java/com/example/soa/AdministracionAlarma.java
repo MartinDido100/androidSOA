@@ -67,6 +67,7 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
     private static final int SHAKE_THRESHOLD_GRAVITY = 5;
     private static final int SHAKE_TIME_LAPSE = 5000;
     NotificationManager notificationManager;
+    private static final String HandshakeValue = "2";
 
 
     @Override
@@ -164,7 +165,7 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
 
         //I send a character when resuming.beginning transmission to check device is connected
         //If it is not an exception will be thrown in the write method and finish() will be called
-        mConnectedThread.write("2");
+        mConnectedThread.write(HandshakeValue);
     }
 
     @Override
