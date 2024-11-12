@@ -68,6 +68,7 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
     private static final int SHAKE_TIME_LAPSE = 5000;
     NotificationManager notificationManager;
     private static final String HandshakeValue = "2";
+    private static final String MessageValue = "1";
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -345,7 +346,7 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
     }
 
     private void encenderAlarma(){
-        mConnectedThread.write("1");  // Send "1" via Bluetooth
+        mConnectedThread.write(MessageValue);  // Send "1" via Bluetooth
         btnApagar.setVisibility(View.VISIBLE);
         btnEncender.setVisibility(View.INVISIBLE);
         txtEstado.setText("Encendido");
@@ -362,7 +363,7 @@ public class AdministracionAlarma extends AppCompatActivity implements SensorEve
     };
 
     private void apagarAlarma() throws IOException {
-        mConnectedThread.write("1");
+        mConnectedThread.write(MessageValue);
         btnApagar.setVisibility(View.INVISIBLE);
         btnEncender.setVisibility(View.VISIBLE);
         txtEstado.setText("Apagado");
